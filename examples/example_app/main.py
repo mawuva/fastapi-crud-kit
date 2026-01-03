@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from .database import init_db, close_db
+from .catalogs.routes import router as catalogs_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,3 +33,5 @@ async def root():
         "docs": "/docs",
         "openapi": "/openapi.json",
     }
+
+app.include_router(catalogs_router)

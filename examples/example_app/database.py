@@ -3,6 +3,10 @@
 from fastapi_crud_kit.database import DatabaseFactory, get_async_db
 from fastapi_crud_kit.database.base import Base
 
+# Import models to register them with SQLAlchemy
+from .catalogs.models import Category, Tag
+from .articles.models import Article
+
 # Database URL - using SQLite for simplicity
 # Change this to your database URL (e.g., PostgreSQL, MySQL, etc.)
 DATABASE_URL = "sqlite+aiosqlite:///./example.db"
