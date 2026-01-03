@@ -28,21 +28,44 @@ class CRUDBase(Generic[ModelType]):
             AsyncCRUDManager() if use_async else SyncCRUDManager()
         )
 
-    def _build_query(self, query_params: QueryParams) -> Select[Any]:
+        # Detect if model supports soft delete
+        self.supports_soft_delete = hasattr(model, "deleted_at")
+
+    def _build_query(
+        self, query_params: QueryParams, include_deleted: bool = False
+    ) -> Select[Any]:
         """
         Build a query from query parameters.
 
         Args:
             query_params: Query parameters (filters, sort, include, fields)
+            include_deleted: If True, include soft-deleted records (only if soft delete is supported)
 
         Returns:
             Select statement ready to execute
         """
         builder = QueryBuilder(self.model)
-        return builder.apply(query_params)
+        query = builder.apply(query_params)
+
+        # Add soft delete filter if model supports it and we don't want to include deleted
+        if self.supports_soft_delete and not include_deleted:
+            # Check if deleted_at filter already exists in the query params
+            has_deleted_at_filter = any(
+                f.field == "deleted_at" for f in query_params.filters
+            )
+            if not has_deleted_at_filter:
+                # Add filter to exclude soft-deleted records using SQLAlchemy's is_() method
+                deleted_at_col = getattr(self.model, "deleted_at", None)
+                if deleted_at_col is not None:
+                    query = query.where(deleted_at_col.is_(None))
+
+        return query
 
     async def list(
-        self, session: Union[AsyncSession, Session], query_params: QueryParams
+        self,
+        session: Union[AsyncSession, Session],
+        query_params: QueryParams,
+        include_deleted: bool = False,
     ) -> List[Any]:
         """
         List all items matching the query parameters.
@@ -50,11 +73,12 @@ class CRUDBase(Generic[ModelType]):
         Args:
             session: SQLAlchemy session (AsyncSession or Session)
             query_params: Query parameters (filters, sort, include, fields)
+            include_deleted: If True, include soft-deleted records (only if soft delete is supported)
 
         Returns:
             List of results from the query
         """
-        query = self._build_query(query_params)
+        query = self._build_query(query_params, include_deleted=include_deleted)
         # Type narrowing: manager methods accept Union[AsyncSession, Session]
         return await self.manager.list(session, query)
 
@@ -101,6 +125,7 @@ class CRUDBase(Generic[ModelType]):
         session: Union[AsyncSession, Session],
         id: Any,
         query_params: QueryParams | None = None,
+        include_deleted: bool = False,
     ) -> ModelType | None:
         """
         Get a single item by ID.
@@ -109,6 +134,7 @@ class CRUDBase(Generic[ModelType]):
             session: SQLAlchemy session (AsyncSession or Session)
             id: Primary key value (id or uuid depending on model and identifier type)
             query_params: Optional query parameters (for includes, fields)
+            include_deleted: If True, include soft-deleted records (only if soft delete is supported)
 
         Returns:
             Model instance or None if not found
@@ -130,7 +156,7 @@ class CRUDBase(Generic[ModelType]):
         else:
             query_params = QueryParams(filters=filters)
 
-        query = self._build_query(query_params)
+        query = self._build_query(query_params, include_deleted=include_deleted)
         # Type narrowing: manager methods accept Union[AsyncSession, Session]
         return await self.manager.get(session, query)
 
@@ -210,13 +236,19 @@ class CRUDBase(Generic[ModelType]):
         # Type narrowing: manager methods accept Union[AsyncSession, Session]
         return await self.manager.update(session, db_obj)
 
-    async def delete(self, session: Union[AsyncSession, Session], id: Any) -> ModelType:
+    async def delete(
+        self, session: Union[AsyncSession, Session], id: Any, hard: bool = False
+    ) -> ModelType:
         """
         Delete an item.
+
+        If the model supports soft delete and hard=False (default), performs a soft delete.
+        Otherwise, performs a hard delete (permanent removal from database).
 
         Args:
             session: SQLAlchemy session (AsyncSession or Session)
             id: Primary key value (id or uuid depending on model)
+            hard: If True, perform hard delete even if soft delete is supported
 
         Returns:
             Deleted model instance
@@ -229,5 +261,58 @@ class CRUDBase(Generic[ModelType]):
             model_name = self.model.__name__
             raise NotFoundError(model_name, id)
 
+        # Perform soft delete if supported and hard=False
+        if self.supports_soft_delete and not hard:
+            # Use the model's soft_delete method if available
+            if hasattr(db_obj, "soft_delete"):
+                db_obj.soft_delete()  # type: ignore[attr-defined]
+            else:
+                # Fallback: set deleted_at directly
+                from fastapi_crud_kit.models.mixins import utcnow
+
+                db_obj.deleted_at = utcnow()  # type: ignore[attr-defined,assignment]
+
+            # Type narrowing: manager methods accept Union[AsyncSession, Session]
+            return await self.manager.update(session, db_obj)
+        else:
+            # Hard delete
+            # Type narrowing: manager methods accept Union[AsyncSession, Session]
+            return await self.manager.delete(session, db_obj)
+
+    async def restore(
+        self, session: Union[AsyncSession, Session], id: Any
+    ) -> ModelType:
+        """
+        Restore a soft-deleted item.
+
+        Args:
+            session: SQLAlchemy session (AsyncSession or Session)
+            id: Primary key value (id or uuid depending on model)
+
+        Returns:
+            Restored model instance
+
+        Raises:
+            NotFoundError: If the object with the given id is not found
+            ValueError: If the model does not support soft delete
+        """
+        if not self.supports_soft_delete:
+            raise ValueError(
+                f"Model {self.model.__name__} does not support soft delete"
+            )
+
+        # Get object including soft-deleted ones
+        db_obj = await self.get(session, id, include_deleted=True)
+        if db_obj is None:
+            model_name = self.model.__name__
+            raise NotFoundError(model_name, id)
+
+        # Use the model's restore method if available
+        if hasattr(db_obj, "restore"):
+            db_obj.restore()  # type: ignore[attr-defined]
+        else:
+            # Fallback: set deleted_at to None directly
+            db_obj.deleted_at = None  # type: ignore[attr-defined,assignment]
+
         # Type narrowing: manager methods accept Union[AsyncSession, Session]
-        return await self.manager.delete(session, db_obj)
+        return await self.manager.update(session, db_obj)
