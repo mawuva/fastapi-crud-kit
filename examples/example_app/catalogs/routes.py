@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 from ..database import get_db
 from .models import Category, Tag
-from fastapi_crud_kit.query import parse_query_params
+from fastapi_crud_kit.query import parse_query_params, AsyncQueryBuilder
 
 
 router = APIRouter(prefix="/catalogs", tags=["catalogs"])
@@ -16,11 +15,15 @@ async def list_categories(
     db: AsyncSession = Depends(get_db),
 ):
     """List all categories."""
-    result = await db.execute(select(Category))
-    categories = result.scalars().all()
+    # result = await db.execute(select(Category))
+    # categories = result.scalars().all()
     
     qp = parse_query_params(request.query_params)
-    return qp.dict()
+    builder = AsyncQueryBuilder(db, Category)
+    statement = builder.apply(qp)
+    result = await db.execute(statement)
+    categories = result.scalars().all()
+    return categories
             
     # return {
     #     "categories": [
