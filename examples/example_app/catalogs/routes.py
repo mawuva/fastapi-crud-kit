@@ -4,17 +4,25 @@ from sqlalchemy import select
 
 from ..database import get_db
 from .models import Category, Tag
+from fastapi_crud_kit.query import QueryParams, get_query_parser
 
 
 router = APIRouter(prefix="/catalogs", tags=["catalogs"])
 
+
 @router.get("/categories")
 async def list_categories(
-    session: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
+    query: QueryParams = Depends(get_query_parser),
 ):
     """List all categories."""
-    result = await session.execute(select(Category))
+    result = await db.execute(select(Category))
     categories = result.scalars().all()
+    
+    filters = query.filters
+    for filter in filters:
+        print(filter)
+            
     return {
         "categories": [
             {

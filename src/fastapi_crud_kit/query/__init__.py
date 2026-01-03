@@ -5,6 +5,7 @@ This module provides tools to parse and validate query string parameters,
 particularly for filtering, sorting, and field selection.
 """
 
+from .dependencies import get_query_parser
 from .filters import FilterSchema, FilterOperator
 from .parser import QueryParams, QueryParser
 
@@ -13,4 +14,5 @@ __all__ = [
     "FilterOperator",
     "QueryParser",
     "QueryParams",
+    "get_query_parser",
 ]
