@@ -18,7 +18,6 @@ __all__ = [
     "DatabaseFactory",
     "get_async_db",
     "get_sync_db",
-    
     "DatabaseError",
     "ConnectionError",
     "TransactionError",
