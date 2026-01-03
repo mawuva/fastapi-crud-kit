@@ -18,8 +18,10 @@ from fastapi_crud_kit.database.exceptions import (
     ConnectionError,
     DatabaseError,
     IsolationLevelError,
+    NotFoundError,
     ReadOnlyViolationError,
     TransactionError,
+    ValidationError,
 )
 from fastapi_crud_kit.database.factory import DatabaseFactory
 from fastapi_crud_kit.database.session import get_async_db, get_sync_db
@@ -33,6 +35,8 @@ __all__ = [
     "TransactionError",
     "ReadOnlyViolationError",
     "IsolationLevelError",
+    "NotFoundError",
+    "ValidationError",
     "ReadOnlyAsync",
     "ReadOnlySync",
     "RetryAsync",
