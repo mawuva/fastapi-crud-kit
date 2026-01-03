@@ -1,8 +1,10 @@
-from typing import Any, Type
+from typing import Any, Optional, Type
 
 from sqlalchemy import Select, inspect, select
 from sqlalchemy.orm import selectinload
 
+from .config import QueryBuilderConfig
+from .filters.validator import FilterValidator
 from .schema import FilterSchema, QueryParams
 
 
@@ -19,12 +21,48 @@ class QueryBuilder:
         "in": lambda col, val: col.in_(val if isinstance(val, list) else [val]),
     }
 
-    def __init__(self, model: Type[Any]):
+    def __init__(
+        self, model: Type[Any], config: Optional[QueryBuilderConfig] = None
+    ) -> None:
+        """
+        Initialize QueryBuilder.
+
+        Args:
+            model: SQLAlchemy model class
+            config: Optional QueryBuilderConfig for filter validation
+        """
         self.model = model
+        self.config = config
         self.query: Select[Any] = select(model)
 
     def apply_filters(self, filters: list[FilterSchema]) -> "QueryBuilder":
+        """
+        Apply filters to the query.
+
+        If a QueryBuilderConfig is provided, filters are validated before application.
+        Custom callbacks from AllowedFilters are used if available.
+
+        Args:
+            filters: List of FilterSchema to apply
+
+        Returns:
+            Self for method chaining
+        """
+        # Validate filters if config is provided
+        if self.config:
+            validator = FilterValidator(self.config)
+            filters = validator.validate(filters)
+
         for f in filters:
+            # Check if there's a custom callback for this filter
+            if self.config:
+                allowed_filter = self.config.get_allowed_filter(f.field)
+                if allowed_filter and allowed_filter.callback:
+                    # Use custom callback: callback(query, value) -> query
+                    self.query = allowed_filter.callback(self.query, f.value)
+                    continue
+
+            # Use standard operator-based filtering
             col = getattr(self.model, f.field, None)
             if col is None:
                 continue

@@ -1,53 +1,38 @@
-import re
-from typing import List, Mapping
+from typing import List, Mapping, Union
 
-from .schema import FilterSchema, QueryParams
+from .filters.parser import parse_filters
+from .schema import QueryParams
 from .utils import split_comma_separated
 
-FILTER_REGEX = re.compile(r"^filter\[(?P<field>[^\]]+)\](?:\[(?P<operator>[^\]]+)\])?$")
 
-
-def parse_filters(query_params: Mapping[str, str]) -> List[FilterSchema]:
-    filters: list[FilterSchema] = []
-
-    for key, value in query_params.items():
-        match = FILTER_REGEX.match(key)
-        if not match:
-            continue
-
-        filters.append(
-            FilterSchema(
-                field=match.group("field"),
-                operator=match.group("operator") or "eq",
-                value=value,
-            )
-        )
-
-    return filters
-
-
-def parse_sort(query_params: Mapping[str, str]) -> List[str]:
+def parse_sort(query_params: Mapping[str, Union[str, List[str]]]) -> List[str]:
     sort = query_params.get("sort")
     if not sort:
         return []
+    if isinstance(sort, list):
+        return sort
     return split_comma_separated(sort)
 
 
-def parse_include(query_params: Mapping[str, str]) -> List[str]:
+def parse_include(query_params: Mapping[str, Union[str, List[str]]]) -> List[str]:
     include = query_params.get("include")
     if not include:
         return []
+    if isinstance(include, list):
+        return include
     return split_comma_separated(include)
 
 
-def parse_fields(query_params: Mapping[str, str]) -> List[str]:
+def parse_fields(query_params: Mapping[str, Union[str, List[str]]]) -> List[str]:
     fields = query_params.get("fields")
     if not fields:
         return []
+    if isinstance(fields, list):
+        return fields
     return split_comma_separated(fields)
 
 
-def parse_query_params(query_params: Mapping[str, str]) -> QueryParams:
+def parse_query_params(query_params: Mapping[str, Union[str, List[str]]]) -> QueryParams:
     return QueryParams(
         filters=parse_filters(query_params),
         sort=parse_sort(query_params),

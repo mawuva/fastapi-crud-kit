@@ -9,15 +9,35 @@ from sqlalchemy import Select, inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
+from typing import Optional
+
 from fastapi_crud_kit.crud.manager import AsyncCRUDManager, SyncCRUDManager
 from fastapi_crud_kit.database.exceptions import NotFoundError, ValidationError
-from fastapi_crud_kit.query import FilterSchema, QueryBuilder, QueryParams
+from fastapi_crud_kit.query import (
+    FilterSchema,
+    QueryBuilder,
+    QueryBuilderConfig,
+    QueryParams,
+)
 
 ModelType = TypeVar("ModelType")
 
 
 class CRUDBase(Generic[ModelType]):
-    def __init__(self, model: Type[ModelType], use_async: bool | None = None) -> None:
+    def __init__(
+        self,
+        model: Type[ModelType],
+        use_async: bool | None = None,
+        query_config: Optional[QueryBuilderConfig] = None,
+    ) -> None:
+        """
+        Initialize CRUD base class.
+
+        Args:
+            model: SQLAlchemy model class
+            use_async: Whether to use async operations (defaults to True)
+            query_config: Optional QueryBuilderConfig for filter validation
+        """
         self.model = model
 
         if use_async is None:
@@ -28,6 +48,9 @@ class CRUDBase(Generic[ModelType]):
             AsyncCRUDManager() if use_async else SyncCRUDManager()
         )
 
+        # Store query config for filter validation
+        self.query_config = query_config
+
         # Detect if model supports soft delete
         self.supports_soft_delete = hasattr(model, "deleted_at")
 
@@ -37,6 +60,8 @@ class CRUDBase(Generic[ModelType]):
         """
         Build a query from query parameters.
 
+        Filters are validated if a QueryBuilderConfig is provided.
+
         Args:
             query_params: Query parameters (filters, sort, include, fields)
             include_deleted: If True, include soft-deleted records (only if soft delete is supported)
@@ -44,7 +69,8 @@ class CRUDBase(Generic[ModelType]):
         Returns:
             Select statement ready to execute
         """
-        builder = QueryBuilder(self.model)
+        # Create QueryBuilder with config (validation happens in apply_filters)
+        builder = QueryBuilder(self.model, config=self.query_config)
         query = builder.apply(query_params)
 
         # Add soft delete filter if model supports it and we don't want to include deleted
