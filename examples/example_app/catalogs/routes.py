@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from .models import Category, Tag
-from fastapi_crud_kit.query import parse_query_params, AsyncQueryBuilder
+from fastapi_crud_kit.query import parse_query_params, QueryBuilder
 
 
 router = APIRouter(prefix="/catalogs", tags=["catalogs"])
@@ -19,7 +19,7 @@ async def list_categories(
     # categories = result.scalars().all()
     
     qp = parse_query_params(request.query_params)
-    builder = AsyncQueryBuilder(db, Category)
+    builder = QueryBuilder(Category)
     statement = builder.apply(qp)
     result = await db.execute(statement)
     categories = result.scalars().all()
