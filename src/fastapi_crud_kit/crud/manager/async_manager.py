@@ -2,7 +2,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Select
 
-from fastapi_crud_kit.database.context import ReadOnlyAsync, TransactionAsync
+from fastapi_crud_kit.database.context import TransactionAsync
 from .base import CRUDManager
 
 
@@ -15,16 +15,16 @@ class AsyncCRUDManager(CRUDManager):
     """
     
     async def list(self, session: AsyncSession, query: Select[Any]):
-        """Execute async query with read-only context."""
-        async with ReadOnlyAsync(session):
-            result = await session.execute(query)
-            return result.scalars().all()
+        """Execute async query."""
+        # No need for ReadOnlyAsync here - we're already using Select statements
+        result = await session.execute(query)
+        return result.scalars().all()
     
     async def get(self, session: AsyncSession, query: Select[Any]):
-        """Execute async query and return single result with read-only context."""
-        async with ReadOnlyAsync(session):
-            result = await session.execute(query)
-            return result.scalar_one_or_none()
+        """Execute async query and return single result."""
+        # No need for ReadOnlyAsync here - we're already using Select statements
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
     
     async def _flush_and_refresh(self, session: AsyncSession, obj: Any) -> None:
         """

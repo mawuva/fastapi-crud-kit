@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import asyncio
 from typing import Any
 from sqlalchemy.orm import Session
 from sqlalchemy import Select
 
-from fastapi_crud_kit.database.context import ReadOnlySync, TransactionSync
+from fastapi_crud_kit.database.context import TransactionSync
 from .base import CRUDManager
 
 
@@ -38,7 +40,7 @@ class SyncCRUDManager(CRUDManager):
     
     def _execute_sync(self, session: Session, query: Select[Any]) -> list[Any]:
         """
-        Private method to execute a synchronous database query with read-only context.
+        Private method to execute a synchronous database query.
         
         Args:
             session: Synchronous SQLAlchemy session
@@ -47,15 +49,15 @@ class SyncCRUDManager(CRUDManager):
         Returns:
             List of results from the query
         """
-        with ReadOnlySync(session):
-            result = session.execute(query)
-            return result.scalars().all()
+        # No need for ReadOnlySync here - we're already using Select statements
+        result = session.execute(query)
+        return result.scalars().all()
     
     def _get_sync(self, session: Session, query: Select[Any]) -> Any:
-        """Private method to get a single result with read-only context."""
-        with ReadOnlySync(session):
-            result = session.execute(query)
-            return result.scalar_one_or_none()
+        """Private method to get a single result."""
+        # No need for ReadOnlySync here - we're already using Select statements
+        result = session.execute(query)
+        return result.scalar_one_or_none()
     
     def _flush_and_refresh(self, session: Session, obj: Any) -> None:
         """

@@ -2,20 +2,20 @@
 Base class for CRUD operations.
 """
 
-from typing import Any, Dict, Type, TypeVar, Union
+from typing import Any, Dict, Type, TypeVar, Union, Generic
+from uuid import UUID as UUIDType
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
+from sqlalchemy import inspect
 
 from fastapi_crud_kit.crud.manager import AsyncCRUDManager, SyncCRUDManager
 from fastapi_crud_kit.database.exceptions import NotFoundError, ValidationError
 from fastapi_crud_kit.query import QueryBuilder, QueryParams, FilterSchema
 
 ModelType = TypeVar("ModelType")
-CreateSchemaType = TypeVar("CreateSchemaType")
-UpdateSchemaType = TypeVar("UpdateSchemaType")
 
 
-class CRUDBase:
+class CRUDBase(Generic[ModelType]):
     def __init__(self, model: Type[ModelType], use_async: bool | None = None):
         self.model = model
         
@@ -56,6 +56,39 @@ class CRUDBase:
         query = self._build_query(query_params)
         return await self.manager.list(session, query)
     
+    def _get_primary_key_field(self, identifier: Any) -> str:
+        """
+        Determine the primary key field name based on the identifier type and model structure.
+        
+        Args:
+            identifier: The identifier value (can be int, UUID, or string)
+            
+        Returns:
+            Field name to use for filtering ('id' or 'uuid')
+        """
+        # If identifier is a UUID (or UUID string), use 'uuid' field
+        if isinstance(identifier, UUIDType) or (
+            isinstance(identifier, str) and len(identifier) == 36 and identifier.count('-') == 4
+        ):
+            # Check if model has uuid field
+            if hasattr(self.model, "uuid"):
+                return "uuid"
+        
+        # Use SQLAlchemy inspector to get the actual primary key
+        mapper = inspect(self.model)
+        pk_columns = mapper.primary_key
+        if pk_columns:
+            # Get the first primary key column name
+            return pk_columns[0].name
+        
+        # Fallback: try 'id' first, then 'uuid'
+        if hasattr(self.model, "id"):
+            return "id"
+        elif hasattr(self.model, "uuid"):
+            return "uuid"
+        
+        raise ValueError(f"Could not determine primary key field for model {self.model.__name__}")
+    
     async def get(
         self,
         session: Union[AsyncSession, Session],
@@ -67,15 +100,14 @@ class CRUDBase:
         
         Args:
             session: SQLAlchemy session (AsyncSession or Session)
-            id: Primary key value (id or uuid depending on model)
+            id: Primary key value (id or uuid depending on model and identifier type)
             query_params: Optional query parameters (for includes, fields)
             
         Returns:
             Model instance or None if not found
         """
-        # Determine the primary key field name
-        # Try 'id' first, then 'uuid'
-        pk_field = "id" if hasattr(self.model, "id") else "uuid"
+        # Determine the primary key field name based on identifier type
+        pk_field = self._get_primary_key_field(id)
         
         # Build query with id filter
         filters = [FilterSchema(field=pk_field, operator="eq", value=id)]
