@@ -4,10 +4,7 @@ from typing import List, Mapping
 from .schema import FilterSchema, QueryParams
 from .utils import split_comma_separated
 
-
-FILTER_REGEX = re.compile(
-    r"^filter\[(?P<field>[^\]]+)\](?:\[(?P<operator>[^\]]+)\])?$"
-)
+FILTER_REGEX = re.compile(r"^filter\[(?P<field>[^\]]+)\](?:\[(?P<operator>[^\]]+)\])?$")
 
 
 def parse_filters(query_params: Mapping[str, str]) -> List[FilterSchema]:
@@ -28,6 +25,7 @@ def parse_filters(query_params: Mapping[str, str]) -> List[FilterSchema]:
 
     return filters
 
+
 def parse_sort(query_params: Mapping[str, str]) -> List[str]:
     sort = query_params.get("sort")
     if not sort:
@@ -47,6 +45,7 @@ def parse_fields(query_params: Mapping[str, str]) -> List[str]:
     if not fields:
         return []
     return split_comma_separated(fields)
+
 
 def parse_query_params(query_params: Mapping[str, str]) -> QueryParams:
     return QueryParams(

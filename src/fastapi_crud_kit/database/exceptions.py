@@ -42,7 +42,7 @@ class NotFoundError(DatabaseError):
     def __init__(self, resource: str, identifier: str | int | None = None):
         """
         Initialize NotFoundError.
-        
+
         Args:
             resource: Name of the resource type (e.g., "User", "Category")
             identifier: Optional identifier that was not found
@@ -62,7 +62,7 @@ class ValidationError(DatabaseError):
     def __init__(self, message: str, field: str | None = None):
         """
         Initialize ValidationError.
-        
+
         Args:
             message: Error message
             field: Optional field name that failed validation
