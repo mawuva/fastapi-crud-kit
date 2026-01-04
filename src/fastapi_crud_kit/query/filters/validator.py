@@ -40,7 +40,7 @@ class FilterValidator:
             List of validated and normalized FilterSchema
 
         Raises:
-            FilterValidationError: If a filter is invalid and ignore_invalid_filters is False
+            FilterValidationError: If a filter is invalid and ignore_invalid_errors is False
             FilterValueTypeError: If a filter value type is invalid for the operator
         """
         if not self.config or not self.config.allowed_filters:
@@ -55,7 +55,7 @@ class FilterValidator:
                 if validated is not None:
                     validated_filters.append(validated)
             except (FilterValidationError, FilterValueTypeError) as e:
-                if not self.config.ignore_invalid_filters:
+                if not self.config.ignore_invalid_errors:
                     raise
                 # Silently ignore invalid filter
 

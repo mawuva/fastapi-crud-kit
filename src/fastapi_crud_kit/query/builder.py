@@ -4,8 +4,11 @@ from sqlalchemy import Select, inspect, select
 from sqlalchemy.orm import selectinload
 
 from .config import QueryBuilderConfig
+from .fields.validator import FieldValidator
 from .filters.validator import FilterValidator
+from .include.validator import IncludeValidator
 from .schema import FilterSchema, QueryParams
+from .sort.validator import SortValidator
 
 
 class QueryBuilder:
@@ -75,6 +78,22 @@ class QueryBuilder:
         return self
 
     def apply_sort(self, sort: list[str]) -> "QueryBuilder":
+        """
+        Apply sorting to the query.
+
+        If a QueryBuilderConfig is provided, sort fields are validated before application.
+
+        Args:
+            sort: List of sort field strings (can include "-" prefix for descending)
+
+        Returns:
+            Self for method chaining
+        """
+        # Validate sorts if config is provided
+        if self.config:
+            validator = SortValidator(self.config)
+            sort = validator.validate(sort)
+
         for s in sort:
             desc = s.startswith("-")
             field = s[1:] if desc else s
@@ -87,8 +106,24 @@ class QueryBuilder:
         return self
 
     def apply_fields(self, fields: list[str]) -> "QueryBuilder":
+        """
+        Apply field selection to the query.
+
+        If a QueryBuilderConfig is provided, fields are validated before application.
+
+        Args:
+            fields: List of field names to select
+
+        Returns:
+            Self for method chaining
+        """
         if not fields:
             return self
+
+        # Validate fields if config is provided
+        if self.config:
+            validator = FieldValidator(self.config)
+            fields = validator.validate(fields)
 
         columns = [getattr(self.model, f) for f in fields if hasattr(self.model, f)]
         if columns:
@@ -97,8 +132,24 @@ class QueryBuilder:
         return self
 
     def apply_includes(self, includes: list[str]) -> "QueryBuilder":
+        """
+        Apply relationship includes to the query.
+
+        If a QueryBuilderConfig is provided, includes are validated before application.
+
+        Args:
+            includes: List of relationship names to include
+
+        Returns:
+            Self for method chaining
+        """
         if not includes:
             return self
+
+        # Validate includes if config is provided
+        if self.config:
+            validator = IncludeValidator(self.config)
+            includes = validator.validate(includes)
 
         inspector = inspect(self.model)
         relationships = {rel.key: rel for rel in inspector.relationships}

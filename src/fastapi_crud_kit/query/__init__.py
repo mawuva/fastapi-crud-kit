@@ -1,10 +1,19 @@
 from .builder import QueryBuilder
 from .config import QueryBuilderConfig
-from .exceptions import FilterValidationError, FilterValueTypeError, QueryBuilderError
+from .exceptions import (
+    FieldValidationError,
+    FilterValidationError,
+    FilterValueTypeError,
+    IncludeValidationError,
+    QueryBuilderError,
+    SortValidationError,
+)
+from .fields import AllowedField
 from .filters import AllowedFilters, FilterOperator
-from .filters.validator import FilterValidator  # Imported here to avoid circular import
+from .include import AllowedInclude
 from .parser import parse_query_params
 from .schema import FilterSchema, PaginatedResponse, QueryParams
+from .sort import AllowedSort
 
 __all__ = [
     "parse_query_params",
@@ -13,10 +22,19 @@ __all__ = [
     "PaginatedResponse",
     "QueryBuilder",
     "QueryBuilderConfig",
-    "FilterValidator",
     "QueryBuilderError",
-    "FilterValidationError",
-    "FilterValueTypeError",
+    # Filters
     "AllowedFilters",
     "FilterOperator",
+    "FilterValidationError",
+    "FilterValueTypeError",
+    # Sorts
+    "AllowedSort",
+    "SortValidationError",
+    # Fields
+    "AllowedField",
+    "FieldValidationError",
+    # Includes
+    "AllowedInclude",
+    "IncludeValidationError",
 ]
