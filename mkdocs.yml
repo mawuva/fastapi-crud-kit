@@ -38,3 +38,10 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Getting Started: getting-started.md
+  - Models: models.md
+  - CRUD Operations: crud-operations.md
+  - Query Building: query-building.md
+  - Database Setup: database-setup.md
+  - Advanced Features: advanced-features.md
+  - API Reference: api-reference.md
