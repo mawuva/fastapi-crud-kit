@@ -2,6 +2,7 @@
 Base class for CRUD operations.
 """
 
+import asyncio
 from typing import Any, Dict, Generic, List, Type, TypeVar, Union
 from uuid import UUID as UUIDType
 
@@ -15,6 +16,7 @@ from fastapi_crud_kit.crud.manager import AsyncCRUDManager, SyncCRUDManager
 from fastapi_crud_kit.database.exceptions import NotFoundError, ValidationError
 from fastapi_crud_kit.query import (
     FilterSchema,
+    PaginatedResponse,
     QueryBuilder,
     QueryBuilderConfig,
     QueryParams,
@@ -29,6 +31,7 @@ class CRUDBase(Generic[ModelType]):
         model: Type[ModelType],
         use_async: bool | None = None,
         query_config: Optional[QueryBuilderConfig] = None,
+        default_limit: int = 100,
     ) -> None:
         """
         Initialize CRUD base class.
@@ -37,6 +40,7 @@ class CRUDBase(Generic[ModelType]):
             model: SQLAlchemy model class
             use_async: Whether to use async operations (defaults to True)
             query_config: Optional QueryBuilderConfig for filter validation
+            default_limit: Default limit for list() when no pagination is specified
         """
         self.model = model
 
@@ -51,11 +55,17 @@ class CRUDBase(Generic[ModelType]):
         # Store query config for filter validation
         self.query_config = query_config
 
+        # Default limit for list() to prevent loading entire database
+        self.default_limit = default_limit
+
         # Detect if model supports soft delete
         self.supports_soft_delete = hasattr(model, "deleted_at")
 
     def _build_query(
-        self, query_params: QueryParams, include_deleted: bool = False
+        self,
+        query_params: QueryParams,
+        include_deleted: bool = False,
+        apply_default_limit: bool = False,
     ) -> Select[Any]:
         """
         Build a query from query parameters.
@@ -65,6 +75,7 @@ class CRUDBase(Generic[ModelType]):
         Args:
             query_params: Query parameters (filters, sort, include, fields)
             include_deleted: If True, include soft-deleted records (only if soft delete is supported)
+            apply_default_limit: If True, apply default_limit when no pagination is specified
 
         Returns:
             Select statement ready to execute
@@ -85,7 +96,44 @@ class CRUDBase(Generic[ModelType]):
                 if deleted_at_col is not None:
                     query = query.where(deleted_at_col.is_(None))
 
+        # Apply default limit if no pagination is specified and apply_default_limit is True
+        if apply_default_limit:
+            has_pagination = (
+                query_params.page is not None
+                or query_params.per_page is not None
+                or query_params.limit is not None
+            )
+            if not has_pagination:
+                query = query.limit(self.default_limit)
+
         return query
+
+    def _build_count_query(
+        self, query_params: QueryParams, include_deleted: bool = False
+    ) -> Select[Any]:
+        """
+        Build a count query from query parameters (without pagination).
+
+        Args:
+            query_params: Query parameters (filters, sort, include, fields)
+            include_deleted: If True, include soft-deleted records (only if soft delete is supported)
+
+        Returns:
+            Select statement for counting (without limit/offset/pagination)
+        """
+        # Create a copy of query_params without pagination
+        count_params = QueryParams(
+            filters=query_params.filters,
+            sort=[],  # No need to sort for counting
+            include=[],  # No need to include relations for counting
+            fields=[],  # No need to select specific fields for counting
+            page=None,
+            per_page=None,
+            limit=None,
+            offset=None,
+        )
+
+        return self._build_query(count_params, include_deleted=include_deleted)
 
     async def list(
         self,
@@ -94,7 +142,10 @@ class CRUDBase(Generic[ModelType]):
         include_deleted: bool = False,
     ) -> List[Any]:
         """
-        List all items matching the query parameters.
+        List items matching the query parameters.
+
+        If no pagination is specified, applies a default limit to prevent loading
+        the entire database.
 
         Args:
             session: SQLAlchemy session (AsyncSession or Session)
@@ -104,9 +155,86 @@ class CRUDBase(Generic[ModelType]):
         Returns:
             List of results from the query
         """
-        query = self._build_query(query_params, include_deleted=include_deleted)
+        query = self._build_query(
+            query_params, include_deleted=include_deleted, apply_default_limit=True
+        )
         # Type narrowing: manager methods accept Union[AsyncSession, Session]
         return await self.manager.list(session, query)
+
+    async def list_paginated(
+        self,
+        session: Union[AsyncSession, Session],
+        query_params: QueryParams,
+        include_deleted: bool = False,
+        default_per_page: int = 20,
+    ) -> PaginatedResponse[ModelType]:
+        """
+        List items with pagination and complete metadata.
+
+        Args:
+            session: SQLAlchemy session (AsyncSession or Session)
+            query_params: Query parameters (filters, sort, include, fields, pagination)
+            include_deleted: If True, include soft-deleted records (only if soft delete is supported)
+            default_per_page: Default items per page if not specified
+
+        Returns:
+            PaginatedResponse with items and complete pagination metadata
+
+        Raises:
+            ValueError: If page is specified without per_page
+        """
+        # Determine pagination parameters
+        if query_params.page is not None:
+            # Page-based pagination
+            if query_params.per_page is None:
+                query_params.per_page = default_per_page
+            page = query_params.page
+            per_page = query_params.per_page
+        elif query_params.limit is not None:
+            # Limit/offset pagination - convert to page-based for metadata
+            per_page = query_params.limit
+            offset = query_params.offset or 0
+            page = (offset // per_page) + 1
+            # Update query_params to use page-based for consistency
+            query_params.page = page
+            query_params.per_page = per_page
+        else:
+            # No pagination specified - use defaults
+            page = 1
+            per_page = default_per_page
+            query_params.page = page
+            query_params.per_page = per_page
+
+        # Validate page number
+        if page < 1:
+            raise ValueError("Page number must be >= 1")
+
+        # Build query with pagination
+        query = self._build_query(query_params, include_deleted=include_deleted)
+
+        # Build count query (without pagination)
+        count_query = self._build_count_query(query_params, include_deleted=include_deleted)
+
+        # Execute queries in parallel
+        items, total = await asyncio.gather(
+            self.manager.list(session, query),
+            self.manager.count(session, count_query),
+        )
+
+        # Calculate pagination metadata
+        total_pages = (total + per_page - 1) // per_page if total > 0 else 0
+        has_next = page < total_pages
+        has_prev = page > 1
+
+        return PaginatedResponse(
+            items=items,
+            total=total,
+            page=page,
+            per_page=per_page,
+            total_pages=total_pages,
+            has_next=has_next,
+            has_prev=has_prev,
+        )
 
     def _get_primary_key_field(self, identifier: Any) -> str:
         """

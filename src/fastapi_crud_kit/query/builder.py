@@ -113,11 +113,44 @@ class QueryBuilder:
 
         return self
 
+    def apply_pagination(
+        self, limit: int | None = None, offset: int | None = None
+    ) -> "QueryBuilder":
+        """
+        Apply pagination (limit and offset) to the query.
+
+        Args:
+            limit: Maximum number of results to return
+            offset: Number of results to skip
+
+        Returns:
+            Self for method chaining
+        """
+        if limit is not None:
+            self.query = self.query.limit(limit)
+        if offset is not None:
+            self.query = self.query.offset(offset)
+        return self
+
     def apply(self, params: QueryParams) -> Select[Any]:
+        # Calculate limit and offset from page/per_page or use direct limit/offset
+        limit = None
+        offset = None
+
+        if params.page is not None and params.per_page is not None:
+            # Page-based pagination
+            offset = (params.page - 1) * params.per_page
+            limit = params.per_page
+        elif params.limit is not None:
+            # Direct limit/offset pagination
+            limit = params.limit
+            offset = params.offset
+
         return (
             self.apply_filters(params.filters)
             .apply_sort(params.sort)
             .apply_fields(params.fields)
             .apply_includes(params.include)
+            .apply_pagination(limit=limit, offset=offset)
             .query
         )

@@ -47,6 +47,22 @@ class CRUDManager(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def count(
+        self, session: Union[AsyncSession, Session], query: Select[Any]
+    ) -> int:
+        """
+        Count the number of results for a query.
+
+        Args:
+            session: SQLAlchemy session (AsyncSession or Session)
+            query: Select statement to count
+
+        Returns:
+            Number of results
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     async def create(self, session: Union[AsyncSession, Session], obj: Any) -> Any:
         """
         Create a new database record.

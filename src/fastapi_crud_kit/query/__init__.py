@@ -4,12 +4,13 @@ from .exceptions import FilterValidationError, FilterValueTypeError, QueryBuilde
 from .filters import AllowedFilters, FilterOperator
 from .filters.validator import FilterValidator  # Imported here to avoid circular import
 from .parser import parse_query_params
-from .schema import FilterSchema, QueryParams
+from .schema import FilterSchema, PaginatedResponse, QueryParams
 
 __all__ = [
     "parse_query_params",
     "QueryParams",
     "FilterSchema",
+    "PaginatedResponse",
     "QueryBuilder",
     "QueryBuilderConfig",
     "FilterValidator",

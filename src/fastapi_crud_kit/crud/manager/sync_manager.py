@@ -76,6 +76,34 @@ class SyncCRUDManager(CRUDManager):
         result = session.execute(query)
         return result.scalar_one_or_none()
 
+    async def count(
+        self, session: Union[AsyncSession, Session], query: Select[Any]
+    ) -> int:
+        """Count results of sync query."""
+        from sqlalchemy import func, select
+
+        if not isinstance(session, Session):
+            raise TypeError("SyncCRUDManager requires a Session, not AsyncSession")
+        return await asyncio.to_thread(self._count_sync, session, query)
+
+    def _count_sync(self, session: Session, query: Select[Any]) -> int:
+        """
+        Private method to count results.
+        
+        Creates a count query from the original query by wrapping it in a subquery.
+        This preserves all filters and conditions while removing pagination and ordering.
+        """
+        from sqlalchemy import func, select
+
+        # Create a count query from the original query
+        # Use subquery to preserve WHERE clauses but remove ORDER BY, LIMIT, OFFSET
+        # The query passed here should already be without options/fields for counting
+        subquery = query.subquery()
+        count_query = select(func.count()).select_from(subquery)
+        result = session.execute(count_query)
+        count_value = result.scalar_one()
+        return int(count_value) if count_value is not None else 0
+
     def _flush_and_refresh(self, session: Session, obj: Any) -> None:
         """
         Flush changes to database and refresh object to get updated values.
