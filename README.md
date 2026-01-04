@@ -7,14 +7,26 @@
 
 A powerful CRUD toolkit for FastAPI with SQLAlchemy, featuring query building, filtering, sorting, and field selection with async/sync support.
 
+## Why FastAPI CRUD Kit?
+
+Building REST APIs with FastAPI and SQLAlchemy often requires writing repetitive CRUD code, handling query parameters, managing database sessions, and implementing common patterns like pagination, filtering, and soft deletes. FastAPI CRUD Kit eliminates this boilerplate by providing:
+
+- **Ready-to-use CRUD operations** that work with any SQLAlchemy model
+- **Advanced query building** with automatic parsing and validation of query parameters
+- **Production-ready features** like transactions, retries, timeouts, and read-only operations
+- **Type-safe operations** with full type hints support
+- **Flexible architecture** supporting both async and sync SQLAlchemy sessions
+
 ## Features
 
 - 🚀 **Full CRUD Operations**: Create, Read, Update, Delete with minimal boilerplate
 - 🔍 **Advanced Query Building**: Filtering, sorting, field selection, and relationship loading
-- ⚡ **Async & Sync Support**: Works with both async and sync SQLAlchemy sessions
+- ⚡ **Async & Sync Support**: Works seamlessly with both async and sync SQLAlchemy sessions
 - 🛡️ **Filter Validation**: Configurable filter validation with custom callbacks
-- 🔒 **Type Safe**: Full type hints support
+- 🔒 **Type Safe**: Full type hints support throughout
 - 📦 **Production Ready**: Context managers for transactions, retries, and timeouts
+- 🗑️ **Soft Delete**: Built-in support for soft delete functionality
+- 📊 **Pagination**: Built-in pagination support with complete metadata
 
 ## Installation
 
@@ -22,174 +34,84 @@ A powerful CRUD toolkit for FastAPI with SQLAlchemy, featuring query building, f
 pip install fastapi-crud-kit
 ```
 
-## Quick Start
+Or using poetry:
 
-### 1. Define Your Model
-
-```python
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from uuid import UUID, uuid4
-
-class Base(DeclarativeBase):
-    pass
-
-class Category(Base):
-    __tablename__ = "categories"
-    
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    name: Mapped[str]
-    description: Mapped[str | None]
+```bash
+poetry add fastapi-crud-kit
 ```
 
-### 2. Create CRUD Class
+## Quick Example
 
 ```python
 from fastapi_crud_kit.crud.base import CRUDBase
-from fastapi_crud_kit.query import AllowedFilters, QueryBuilderConfig
+from fastapi_crud_kit.models import BaseModel
+from fastapi_crud_kit.query import AllowedFilters, QueryBuilderConfig, parse_query_params
+from sqlalchemy import Column, String
 
+# Define your model
+class Category(BaseModel):
+    __tablename__ = "categories"
+    name = Column(String, nullable=False)
+
+# Create CRUD class
 class CategoryCRUD(CRUDBase[Category]):
     def __init__(self):
         query_config = QueryBuilderConfig(
-            allowed_filters=[
-                AllowedFilters.exact("name"),
-                AllowedFilters.partial("description"),
-            ],
+            allowed_filters=[AllowedFilters.exact("name")]
         )
         super().__init__(model=Category, use_async=True, query_config=query_config)
-```
 
-### 3. Use in FastAPI Routes
-
-```python
-from fastapi import APIRouter, Depends, Request
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi_crud_kit.query import parse_query_params
-
-router = APIRouter()
-category_crud = CategoryCRUD()
-
+# Use in FastAPI route
 @router.get("/categories")
-async def list_categories(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-):
+async def list_categories(request: Request, db: AsyncSession = Depends(get_db)):
     query_params = parse_query_params(request.query_params)
-    categories = await category_crud.list(db, query_params)
-    return categories
-
-@router.get("/categories/{category_id}")
-async def get_category(
-    category_id: UUID,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-):
-    query_params = parse_query_params(request.query_params)
-    category = await category_crud.get(db, category_id, query_params)
-    return category
-
-@router.post("/categories")
-async def create_category(
-    category_data: dict,
-    db: AsyncSession = Depends(get_db),
-):
-    category = await category_crud.create(db, category_data)
-    return category
-
-@router.put("/categories/{category_id}")
-async def update_category(
-    category_id: UUID,
-    category_data: dict,
-    db: AsyncSession = Depends(get_db),
-):
-    category = await category_crud.update(db, category_id, category_data)
-    return category
-
-@router.delete("/categories/{category_id}")
-async def delete_category(
-    category_id: UUID,
-    db: AsyncSession = Depends(get_db),
-):
-    category = await category_crud.delete(db, category_id)
-    return category
+    return await category_crud.list_paginated(db, query_params)
 ```
 
-## Query Parameters
+## How It Works
 
-### Filtering
+### CRUD Operations
 
-```
-GET /categories?filter[name]=Tech&filter[description][like]=%web%
-```
+The `CRUDBase` class provides all standard CRUD operations (`list`, `get`, `create`, `update`, `delete`) that work with any SQLAlchemy model. It automatically handles:
 
-Supported operators: `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `like`, `ilike`, `in`
+- Query building from URL parameters
+- Filter validation and application
+- Pagination with metadata
+- Soft delete filtering (if supported by the model)
+- Relationship loading (eager loading)
 
-### Sorting
+### Query Building
 
-```
-GET /categories?sort=name&sort=-created_at
-```
+The query builder automatically parses and validates query parameters from the request URL:
 
-Prefix with `-` for descending order.
+- **Filters**: `?filter[name]=Tech&filter[price][gte]=100`
+- **Sorting**: `?sort=name&sort=-created_at`
+- **Field Selection**: `?fields=id,name`
+- **Includes**: `?include=products,tags`
+- **Pagination**: `?page=1&per_page=20`
 
-### Field Selection
+All query parameters are validated against your configuration, preventing SQL injection and ensuring type safety.
 
-```
-GET /categories?fields=id,name
-```
+### Base Models
 
-### Include Relations
+The package provides ready-to-use base models with common features:
 
-```
-GET /categories?include=articles
-```
+- `BaseModel`: Includes primary key, UUID, timestamps, and soft delete
+- `BaseModelWithUUIDPK`: UUID as primary key
+- Individual mixins for custom combinations
 
-## Filter Configuration
+### Database Management
 
-Configure allowed filters with validation:
+The `DatabaseFactory` simplifies database setup by automatically detecting the database type and configuring the appropriate drivers. It supports PostgreSQL, MySQL, and SQLite in both async and sync modes.
 
-```python
-from fastapi_crud_kit.query import AllowedFilters, QueryBuilderConfig
+### Context Managers
 
-query_config = QueryBuilderConfig(
-    allowed_filters=[
-        AllowedFilters.exact("name"),  # Exact match
-        AllowedFilters.partial("description"),  # LIKE search
-        AllowedFilters(
-            field="created_at",
-            default_operator="gte",
-            allowed_operators=["gte", "lte", "gt", "lt"],
-        ),
-    ],
-    ignore_invalid_filters=False,  # Raise error on invalid filters
-)
-```
+Production-ready context managers for common patterns:
 
-## Database Setup
-
-### Async Mode
-
-```python
-from fastapi_crud_kit.database import DatabaseFactory
-from fastapi_crud_kit.database.mode import AsyncModeHandler
-
-handler = AsyncModeHandler()
-engine = handler.create_engine("postgresql+asyncpg://user:pass@localhost/db")
-session_maker = handler.create_session_maker(engine)
-```
-
-### Sync Mode
-
-```python
-from fastapi_crud_kit.database.mode import SyncModeHandler
-
-handler = SyncModeHandler()
-engine = handler.create_engine("postgresql+psycopg2://user:pass@localhost/db")
-session_maker = handler.create_session_maker(engine)
-```
-
-## Examples
-
-See the `examples/` directory for complete working examples.
+- **Transactions**: Automatic commit/rollback
+- **Retries**: Exponential backoff for transient failures
+- **Timeouts**: Prevent operations from hanging
+- **Read-only**: Enforce read-only operations
 
 ## Requirements
 
@@ -198,6 +120,30 @@ See the `examples/` directory for complete working examples.
 - Pydantic >= 2.12.5
 - FastAPI >= 0.128.0
 
+## Documentation
+
+Comprehensive documentation with examples, guides, and API reference is available at:
+
+**[https://mawuva.github.io/fastapi-crud-kit/](https://mawuva.github.io/fastapi-crud-kit/)**
+
+Or build it locally:
+
+```bash
+mkdocs serve
+```
+
+## Examples
+
+See the `examples/` directory for complete working examples.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
 ## License
 
 See LICENSE file for details.
+
+## Support
+
+For issues, questions, or contributions, please visit the [GitHub repository](https://github.com/mawuva/fastapi-crud-kit).
