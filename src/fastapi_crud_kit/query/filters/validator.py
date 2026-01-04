@@ -1,9 +1,11 @@
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
-from ..config import QueryBuilderConfig
 from ..exceptions import FilterValidationError, FilterValueTypeError
 from ..schema import FilterSchema
 from .operators import FilterOperator
+
+if TYPE_CHECKING:
+    from ..config import QueryBuilderConfig
 
 
 class FilterValidator:
@@ -14,7 +16,7 @@ class FilterValidator:
     are applied to queries, and validates that value types match operator requirements.
     """
 
-    def __init__(self, config: Optional[QueryBuilderConfig] = None) -> None:
+    def __init__(self, config: Optional[Any] = None) -> None:
         """
         Initialize the filter validator.
 
@@ -22,7 +24,10 @@ class FilterValidator:
             config: QueryBuilderConfig with allowed filters configuration.
                    If None, no validation is performed (all filters allowed).
         """
-        self.config = config
+        # Import here to avoid circular import
+        from ..config import QueryBuilderConfig as _QueryBuilderConfig
+        
+        self.config: Optional[_QueryBuilderConfig] = config
 
     def validate(self, filters: List[FilterSchema]) -> List[FilterSchema]:
         """

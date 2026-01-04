@@ -12,7 +12,11 @@ from .schemas import (
     TagUpdate,
     TagResponse,
 )
-from fastapi_crud_kit.query import parse_query_params
+from fastapi_crud_kit.query import (
+    parse_query_params,
+    FilterValidationError,
+    FilterValueTypeError,
+)
 from fastapi_crud_kit.database.exceptions import NotFoundError, ValidationError
 
 
@@ -33,14 +37,24 @@ async def list_categories(
     List all categories with optional filtering, sorting, and field selection.
     
     Query parameters:
-    - filter[field][operator]=value: Filter by field (e.g., filter[name][eq]=Tech)
+    - filter[name]=value: Filter by exact name match
+    - filter[description]=value: Filter by description (partial match/LIKE)
+    - filter[created_at][gte]=value: Filter by created_at (gte, lte, gt, lt)
     - sort=field or sort=-field: Sort by field (prefix with - for descending)
     - include=relation: Include related objects (e.g., include=articles)
     - fields=field1,field2: Select only specific fields
+    
+    Allowed filters: name (exact), description (partial), created_at (comparison)
     """
-    query_params = parse_query_params(request.query_params)
-    categories = await category_crud.list(db, query_params)
-    return categories
+    try:
+        query_params = parse_query_params(request.query_params)
+        categories = await category_crud.list(db, query_params)
+        return categories
+    except (FilterValidationError, FilterValueTypeError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid filter: {str(e)}"
+        ) from e
 
 
 @router.get("/categories/{category_id}", response_model=CategoryResponse)
@@ -134,14 +148,24 @@ async def list_tags(
     List all tags with optional filtering, sorting, and field selection.
     
     Query parameters:
-    - filter[field][operator]=value: Filter by field (e.g., filter[name][eq]=Tech)
+    - filter[name]=value: Filter by exact name match
+    - filter[description]=value: Filter by description (partial match/LIKE)
+    - filter[created_at][gte]=value: Filter by created_at (gte, lte, gt, lt)
     - sort=field or sort=-field: Sort by field (prefix with - for descending)
     - include=relation: Include related objects (e.g., include=articles)
     - fields=field1,field2: Select only specific fields
+    
+    Allowed filters: name (exact), description (partial), created_at (comparison)
     """
-    query_params = parse_query_params(request.query_params)
-    tags = await tag_crud.list(db, query_params)
-    return tags
+    try:
+        query_params = parse_query_params(request.query_params)
+        tags = await tag_crud.list(db, query_params)
+        return tags
+    except (FilterValidationError, FilterValueTypeError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid filter: {str(e)}"
+        ) from e
 
 
 @router.get("/tags/{tag_id}", response_model=TagResponse)

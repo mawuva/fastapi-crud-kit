@@ -14,7 +14,7 @@ class QueryBuilderConfig:
     def __init__(
         self,
         allowed_filters: Optional[List[AllowedFilters]] = None,
-        ignore_invalid_filters: bool = True,
+        ignore_invalid_filters: bool = False,
     ) -> None:
         """
         Initialize QueryBuilder configuration.

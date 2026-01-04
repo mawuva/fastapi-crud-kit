@@ -1,7 +1,8 @@
 from .builder import QueryBuilder
 from .config import QueryBuilderConfig
 from .exceptions import FilterValidationError, FilterValueTypeError, QueryBuilderError
-from .filters.validator import FilterValidator
+from .filters import AllowedFilters, FilterOperator
+from .filters.validator import FilterValidator  # Imported here to avoid circular import
 from .parser import parse_query_params
 from .schema import FilterSchema, QueryParams
 
@@ -15,4 +16,6 @@ __all__ = [
     "QueryBuilderError",
     "FilterValidationError",
     "FilterValueTypeError",
+    "AllowedFilters",
+    "FilterOperator",
 ]
