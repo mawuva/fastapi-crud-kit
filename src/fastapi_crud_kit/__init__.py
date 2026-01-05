@@ -5,7 +5,7 @@ A powerful CRUD toolkit for FastAPI with SQLAlchemy, featuring query building,
 filtering, sorting, and field selection with async/sync support.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 # CRUD Operations
 from fastapi_crud_kit.crud.base import CRUDBase

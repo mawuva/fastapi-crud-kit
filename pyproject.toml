@@ -1,6 +1,6 @@
 [project]
 name = "fastapi-crud-kit"
-version = "0.1.0"
+version = "0.2.0"
 description = "A powerful CRUD toolkit for FastAPI with SQLAlchemy, featuring query building, filtering, sorting, and field selection with async/sync support."
 authors = [
     {name = "Ephraim Seddor",email = "seddorephraim7@gmail.com"}
@@ -42,7 +42,7 @@ docs = [
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.1.0"
+version = "0.2.0"
 tag_format = "v$version"
 update_changelog_on_bump = true
 version_files = [
