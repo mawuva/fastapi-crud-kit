@@ -1,5 +1,7 @@
 """Custom exceptions for query building and filtering."""
 
+from typing import Any
+
 
 class QueryBuilderError(Exception):
     """Base exception for query builder errors."""
@@ -25,7 +27,7 @@ class FilterValidationError(QueryBuilderError):
 class FilterValueTypeError(QueryBuilderError):
     """Exception raised when a filter value type is invalid for the operator."""
 
-    def __init__(self, message: str, field: str, operator: str, value: any) -> None:
+    def __init__(self, message: str, field: str, operator: str, value: Any) -> None:
         """
         Initialize filter value type error.
 

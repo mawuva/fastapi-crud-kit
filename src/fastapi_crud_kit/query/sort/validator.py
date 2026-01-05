@@ -3,13 +3,13 @@ from typing import TYPE_CHECKING, Any, List, Optional
 from ..exceptions import SortValidationError
 
 if TYPE_CHECKING:
-    from ..config import QueryBuilderConfig
+    pass
 
 
 class SortValidator:
     """
     Validates sort fields based on QueryBuilderConfig.
-    
+
     This class ensures that only allowed sort fields are applied to queries.
     """
 
@@ -23,7 +23,7 @@ class SortValidator:
         """
         # Import here to avoid circular import
         from ..config import QueryBuilderConfig as _QueryBuilderConfig
-        
+
         self.config: Optional[_QueryBuilderConfig] = config
 
     def validate(self, sort_fields: List[str]) -> List[str]:
@@ -50,7 +50,7 @@ class SortValidator:
                 validated = self._validate_single_sort(sort_field)
                 if validated is not None:
                     validated_sorts.append(validated)
-            except SortValidationError as e:
+            except SortValidationError:
                 if not self.config.ignore_invalid_errors:
                     raise
                 # Silently ignore invalid sort
@@ -111,4 +111,3 @@ class SortValidator:
         else:
             # User didn't specify and default is asc
             return actual_field
-

@@ -3,14 +3,12 @@ Base class for CRUD operations.
 """
 
 import asyncio
-from typing import Any, Dict, Generic, List, Type, TypeVar, Union
+from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
 from uuid import UUID as UUIDType
 
 from sqlalchemy import Select, inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
-
-from typing import Optional
 
 from fastapi_crud_kit.crud.manager import AsyncCRUDManager, SyncCRUDManager
 from fastapi_crud_kit.database.exceptions import NotFoundError, ValidationError
@@ -213,7 +211,9 @@ class CRUDBase(Generic[ModelType]):
         query = self._build_query(query_params, include_deleted=include_deleted)
 
         # Build count query (without pagination)
-        count_query = self._build_count_query(query_params, include_deleted=include_deleted)
+        count_query = self._build_count_query(
+            query_params, include_deleted=include_deleted
+        )
 
         # Execute queries in parallel
         items, total = await asyncio.gather(

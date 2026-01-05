@@ -248,7 +248,9 @@ class TransactionAsync(AbstractAsyncContextManager, _TransactionBase):
                         connection = await connection_result  # type: ignore[misc]
                     else:
                         connection = connection_result  # type: ignore[assignment]
-                    await connection.execution_options(isolation_level=self.isolation_level)  # type: ignore[misc]
+                    await connection.execution_options(
+                        isolation_level=self.isolation_level
+                    )  # type: ignore[misc]
                     self._log_info(f"Set isolation level to {self.isolation_level}")
                 except Exception as e:
                     raise IsolationLevelError(

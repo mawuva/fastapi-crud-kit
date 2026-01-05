@@ -10,7 +10,7 @@ from .models import Category, Tag
 class CategoryCRUD(CRUDBase[Category]):
     """
     CRUD operations for Category model.
-    
+
     Inherits from CRUDBase and provides all standard CRUD operations:
     - list: List all categories with filtering, sorting, etc.
     - get: Get a single category by ID
@@ -18,8 +18,8 @@ class CategoryCRUD(CRUDBase[Category]):
     - update: Update an existing category
     - delete: Delete a category
     """
-    
-    def __init__(self):
+
+    def __init__(self) -> None:
         # Define allowed filters for Category
         query_config = QueryBuilderConfig(
             allowed_filters=[
@@ -34,7 +34,7 @@ class CategoryCRUD(CRUDBase[Category]):
                     allowed_operators=["gte", "lte", "gt", "lt"],
                 ),
             ],
-            ignore_invalid_filters=False,  # Reject invalid filters with error
+            ignore_invalid_errors=False,  # Reject invalid filters with error
         )
         super().__init__(model=Category, use_async=True, query_config=query_config)
 
@@ -42,7 +42,7 @@ class CategoryCRUD(CRUDBase[Category]):
 class TagCRUD(CRUDBase[Tag]):
     """
     CRUD operations for Tag model.
-    
+
     Inherits from CRUDBase and provides all standard CRUD operations:
     - list: List all tags with filtering, sorting, etc.
     - get: Get a single tag by ID
@@ -50,8 +50,8 @@ class TagCRUD(CRUDBase[Tag]):
     - update: Update an existing tag
     - delete: Delete a tag
     """
-    
-    def __init__(self):
+
+    def __init__(self) -> None:
         # Define allowed filters for Tag
         query_config = QueryBuilderConfig(
             allowed_filters=[
@@ -66,6 +66,6 @@ class TagCRUD(CRUDBase[Tag]):
                     allowed_operators=["gte", "lte", "gt", "lt"],
                 ),
             ],
-            ignore_invalid_filters=False,  # Reject invalid filters with error
+            ignore_invalid_errors=False,  # Reject invalid filters with error
         )
         super().__init__(model=Tag, use_async=True, query_config=query_config)

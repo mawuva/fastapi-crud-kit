@@ -80,7 +80,6 @@ class SyncCRUDManager(CRUDManager):
         self, session: Union[AsyncSession, Session], query: Select[Any]
     ) -> int:
         """Count results of sync query."""
-        from sqlalchemy import func, select
 
         if not isinstance(session, Session):
             raise TypeError("SyncCRUDManager requires a Session, not AsyncSession")
@@ -89,7 +88,7 @@ class SyncCRUDManager(CRUDManager):
     def _count_sync(self, session: Session, query: Select[Any]) -> int:
         """
         Private method to count results.
-        
+
         Creates a count query from the original query by wrapping it in a subquery.
         This preserves all filters and conditions while removing pagination and ordering.
         """

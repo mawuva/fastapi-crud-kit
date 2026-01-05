@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import Tuple
 
+
 class FilterOperator(str, Enum):
     """Enumeration of available filter operators."""
 
@@ -16,7 +17,7 @@ class FilterOperator(str, Enum):
 
     def __str__(self) -> str:
         return self.value
-    
+
     @classmethod
     def get_all(cls) -> list[str]:
         """Return all operators."""
@@ -29,7 +30,7 @@ class FilterOperator(str, Enum):
             return cls(value)
         except ValueError:
             raise ValueError(f"Invalid operator: {value}")
-        
+
     @classmethod
     def comparison_operators(cls) -> Tuple["FilterOperator", ...]:
         """Return all comparison operators."""
@@ -56,4 +57,3 @@ class FilterOperator(str, Enum):
             cls.LESS_THAN,
             cls.LESS_THAN_OR_EQUAL,
         )
-

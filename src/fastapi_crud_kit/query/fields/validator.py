@@ -3,13 +3,13 @@ from typing import TYPE_CHECKING, Any, List, Optional
 from ..exceptions import FieldValidationError
 
 if TYPE_CHECKING:
-    from ..config import QueryBuilderConfig
+    pass
 
 
 class FieldValidator:
     """
     Validates field selections based on QueryBuilderConfig.
-    
+
     This class ensures that only allowed fields are selected in queries.
     """
 
@@ -23,7 +23,7 @@ class FieldValidator:
         """
         # Import here to avoid circular import
         from ..config import QueryBuilderConfig as _QueryBuilderConfig
-        
+
         self.config: Optional[_QueryBuilderConfig] = config
 
     def validate(self, fields: List[str]) -> List[str]:
@@ -50,7 +50,7 @@ class FieldValidator:
                 validated = self._validate_single_field(field)
                 if validated is not None:
                     validated_fields.append(validated)
-            except FieldValidationError as e:
+            except FieldValidationError:
                 if not self.config.ignore_invalid_errors:
                     raise
                 # Silently ignore invalid field
@@ -97,4 +97,3 @@ class FieldValidator:
             actual_field = allowed_field.field
 
         return actual_field
-

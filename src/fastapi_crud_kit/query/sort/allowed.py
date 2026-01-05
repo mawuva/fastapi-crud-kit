@@ -1,13 +1,13 @@
-from typing import Literal, Optional, Union
+from typing import Literal, Optional
 
 
 class AllowedSort:
     """
     Represents an allowed sort field configuration for query building.
-    
+
     Similar to Spatie Query Builder's AllowedSort, this class defines
     which fields can be used for sorting.
-    
+
     Can be instantiated with a single field or multiple fields:
     - AllowedSort("name")
     - AllowedSort("name", "created_at")
@@ -30,7 +30,7 @@ class AllowedSort:
         """
         if not fields:
             raise ValueError("At least one field must be provided")
-        
+
         self.fields = list(fields)
         self.direction = direction
         # For backward compatibility, keep field and alias for single field
@@ -56,4 +56,3 @@ class AllowedSort:
             *fields,
             direction=direction or self.direction,
         )
-

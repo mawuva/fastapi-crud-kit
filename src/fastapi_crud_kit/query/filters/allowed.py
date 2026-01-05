@@ -6,10 +6,12 @@ from fastapi_crud_kit.query.filters.operators import FilterOperator
 class AllowedFilters:
     """
     Represents an allowed filter configuration for query building.
-    
+
     Similar to Spatie Query Builder's AllowedFilter, this class defines
     which fields can be filtered and with which operators.
     """
+
+    allowed_operators: list[FilterOperator] | None
 
     def __init__(
         self,
@@ -61,7 +63,9 @@ class AllowedFilters:
                         continue
                 else:
                     normalized.append(op)
-            self.allowed_operators = normalized if normalized else [self.default_operator]
+            self.allowed_operators = (
+                normalized if normalized else [self.default_operator]
+            )
 
     def is_operator_allowed(self, operator: FilterOperator | str) -> bool:
         """

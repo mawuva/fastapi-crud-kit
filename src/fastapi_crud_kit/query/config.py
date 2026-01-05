@@ -9,7 +9,7 @@ from .sort.allowed import AllowedSort
 class QueryBuilderConfig:
     """
     Configuration for QueryBuilder with validation for filters, sorts, fields, and includes.
-    
+
     This class holds the configuration for query building, including which
     filters, sorts, fields, and includes are allowed and how to handle invalid ones.
     """
@@ -41,7 +41,7 @@ class QueryBuilderConfig:
         self.allowed_sorts = allowed_sorts or []
         self.allowed_fields = allowed_fields or []
         self.allowed_includes = allowed_includes or []
-        
+
         # Single parameter for all validation errors
         self.ignore_invalid_errors = ignore_invalid_errors
 
@@ -160,7 +160,9 @@ class QueryBuilderConfig:
             return True  # No restrictions, all fields allowed
         return field_or_alias in self._field_map
 
-    def get_allowed_include(self, relationship_or_alias: str) -> Optional[AllowedInclude]:
+    def get_allowed_include(
+        self, relationship_or_alias: str
+    ) -> Optional[AllowedInclude]:
         """
         Get the AllowedInclude instance for a given relationship or alias.
 
@@ -186,4 +188,3 @@ class QueryBuilderConfig:
         if not self.allowed_includes:
             return True  # No restrictions, all includes allowed
         return relationship_or_alias in self._include_map
-

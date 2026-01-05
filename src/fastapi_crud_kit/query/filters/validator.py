@@ -5,13 +5,13 @@ from ..schema import FilterSchema
 from .operators import FilterOperator
 
 if TYPE_CHECKING:
-    from ..config import QueryBuilderConfig
+    pass
 
 
 class FilterValidator:
     """
     Validates and normalizes filters based on QueryBuilderConfig.
-    
+
     This class ensures that only allowed filters with allowed operators
     are applied to queries, and validates that value types match operator requirements.
     """
@@ -26,7 +26,7 @@ class FilterValidator:
         """
         # Import here to avoid circular import
         from ..config import QueryBuilderConfig as _QueryBuilderConfig
-        
+
         self.config: Optional[_QueryBuilderConfig] = config
 
     def validate(self, filters: List[FilterSchema]) -> List[FilterSchema]:
@@ -54,14 +54,16 @@ class FilterValidator:
                 validated = self._validate_single_filter(filter_schema)
                 if validated is not None:
                     validated_filters.append(validated)
-            except (FilterValidationError, FilterValueTypeError) as e:
+            except (FilterValidationError, FilterValueTypeError):
                 if not self.config.ignore_invalid_errors:
                     raise
                 # Silently ignore invalid filter
 
         return validated_filters
 
-    def _validate_single_filter(self, filter_schema: FilterSchema) -> Optional[FilterSchema]:
+    def _validate_single_filter(
+        self, filter_schema: FilterSchema
+    ) -> Optional[FilterSchema]:
         """
         Validate and normalize a single filter.
 
@@ -151,4 +153,3 @@ class FilterValidator:
                     operator=str(operator),
                     value=value,
                 )
-

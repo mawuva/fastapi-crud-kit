@@ -10,7 +10,6 @@ from typing import Any
 
 
 class ModeHandler(ABC):
-
     @abstractmethod
     def create_engine(
         self, database_url: str, echo: bool = False, pool_pre_ping: bool = True

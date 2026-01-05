@@ -19,7 +19,6 @@ from fastapi_crud_kit.query import (
 )
 from fastapi_crud_kit.database.exceptions import NotFoundError, ValidationError
 
-
 router = APIRouter(prefix="/catalogs", tags=["catalogs"])
 
 # Initialize CRUD instances
@@ -32,10 +31,10 @@ tag_crud = TagCRUD()
 async def list_categories(
     request: Request,
     db: AsyncSession = Depends(get_db),
-):
+) -> list[CategoryResponse]:
     """
     List all categories with optional filtering, sorting, and field selection.
-    
+
     Query parameters:
     - filter[name]=value: Filter by exact name match
     - filter[description]=value: Filter by description (partial match/LIKE)
@@ -43,7 +42,7 @@ async def list_categories(
     - sort=field or sort=-field: Sort by field (prefix with - for descending)
     - include=relation: Include related objects (e.g., include=articles)
     - fields=field1,field2: Select only specific fields
-    
+
     Allowed filters: name (exact), description (partial), created_at (comparison)
     """
     try:
@@ -52,8 +51,7 @@ async def list_categories(
         return categories
     except (FilterValidationError, FilterValueTypeError) as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid filter: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid filter: {str(e)}"
         ) from e
 
 
@@ -62,39 +60,40 @@ async def get_category(
     category_id: UUID,
     request: Request,
     db: AsyncSession = Depends(get_db),
-):
+) -> CategoryResponse:
     """
     Get a single category by UUID.
-    
+
     Query parameters:
     - include=relation: Include related objects (e.g., include=articles)
     - fields=field1,field2: Select only specific fields
     """
     query_params = parse_query_params(request.query_params)
     category = await category_crud.get(db, category_id, query_params)
-    
+
     if category is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Category with id {category_id} not found"
+            detail=f"Category with id {category_id} not found",
         )
-    
+
     return category
 
 
-@router.post("/categories", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/categories", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_category(
     category_in: CategoryCreate,
     db: AsyncSession = Depends(get_db),
-):
+) -> CategoryResponse:
     """Create a new category."""
     try:
         category = await category_crud.create(db, category_in.model_dump())
         return category
     except ValidationError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(e)
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
         ) from e
 
 
@@ -103,7 +102,7 @@ async def update_category(
     category_id: UUID,
     category_in: CategoryUpdate,
     db: AsyncSession = Depends(get_db),
-):
+) -> CategoryResponse:
     """Update an existing category."""
     try:
         # Only include non-None values
@@ -111,14 +110,10 @@ async def update_category(
         category = await category_crud.update(db, category_id, update_data)
         return category
     except NotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     except ValidationError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(e)
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
         ) from e
 
 
@@ -126,16 +121,13 @@ async def update_category(
 async def delete_category(
     category_id: UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> CategoryResponse:
     """Delete a category."""
     try:
         category = await category_crud.delete(db, category_id)
         return category
     except NotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
 
 # Tag routes
@@ -143,10 +135,10 @@ async def delete_category(
 async def list_tags(
     request: Request,
     db: AsyncSession = Depends(get_db),
-):
+) -> list[TagResponse]:
     """
     List all tags with optional filtering, sorting, and field selection.
-    
+
     Query parameters:
     - filter[name]=value: Filter by exact name match
     - filter[description]=value: Filter by description (partial match/LIKE)
@@ -154,7 +146,7 @@ async def list_tags(
     - sort=field or sort=-field: Sort by field (prefix with - for descending)
     - include=relation: Include related objects (e.g., include=articles)
     - fields=field1,field2: Select only specific fields
-    
+
     Allowed filters: name (exact), description (partial), created_at (comparison)
     """
     try:
@@ -163,8 +155,7 @@ async def list_tags(
         return tags
     except (FilterValidationError, FilterValueTypeError) as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid filter: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid filter: {str(e)}"
         ) from e
 
 
@@ -173,23 +164,23 @@ async def get_tag(
     tag_id: UUID,
     request: Request,
     db: AsyncSession = Depends(get_db),
-):
+) -> TagResponse:
     """
     Get a single tag by UUID.
-    
+
     Query parameters:
     - include=relation: Include related objects (e.g., include=articles)
     - fields=field1,field2: Select only specific fields
     """
     query_params = parse_query_params(request.query_params)
     tag = await tag_crud.get(db, tag_id, query_params)
-    
+
     if tag is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Tag with id {tag_id} not found"
+            detail=f"Tag with id {tag_id} not found",
         )
-    
+
     return tag
 
 
@@ -197,15 +188,14 @@ async def get_tag(
 async def create_tag(
     tag_in: TagCreate,
     db: AsyncSession = Depends(get_db),
-):
+) -> TagResponse:
     """Create a new tag."""
     try:
         tag = await tag_crud.create(db, tag_in.model_dump())
         return tag
     except ValidationError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(e)
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
         ) from e
 
 
@@ -214,7 +204,7 @@ async def update_tag(
     tag_id: UUID,
     tag_in: TagUpdate,
     db: AsyncSession = Depends(get_db),
-):
+) -> TagResponse:
     """Update an existing tag."""
     try:
         # Only include non-None values
@@ -222,14 +212,10 @@ async def update_tag(
         tag = await tag_crud.update(db, tag_id, update_data)
         return tag
     except NotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     except ValidationError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(e)
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
         ) from e
 
 
@@ -237,13 +223,10 @@ async def update_tag(
 async def delete_tag(
     tag_id: UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> TagResponse:
     """Delete a tag."""
     try:
         tag = await tag_crud.delete(db, tag_id)
         return tag
     except NotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e

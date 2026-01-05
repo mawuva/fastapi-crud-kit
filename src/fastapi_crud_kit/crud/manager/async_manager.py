@@ -44,7 +44,7 @@ class AsyncCRUDManager(CRUDManager):
     ) -> int:
         """
         Count results of async query.
-        
+
         Creates a count query from the original query by wrapping it in a subquery.
         This preserves all filters and conditions while removing pagination and ordering.
         """

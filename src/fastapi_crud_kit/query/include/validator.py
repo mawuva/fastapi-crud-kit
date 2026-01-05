@@ -3,13 +3,13 @@ from typing import TYPE_CHECKING, Any, List, Optional
 from ..exceptions import IncludeValidationError
 
 if TYPE_CHECKING:
-    from ..config import QueryBuilderConfig
+    pass
 
 
 class IncludeValidator:
     """
     Validates relationship includes based on QueryBuilderConfig.
-    
+
     This class ensures that only allowed relationships are included in queries.
     """
 
@@ -23,7 +23,7 @@ class IncludeValidator:
         """
         # Import here to avoid circular import
         from ..config import QueryBuilderConfig as _QueryBuilderConfig
-        
+
         self.config: Optional[_QueryBuilderConfig] = config
 
     def validate(self, includes: List[str]) -> List[str]:
@@ -50,7 +50,7 @@ class IncludeValidator:
                 validated = self._validate_single_include(include)
                 if validated is not None:
                     validated_includes.append(validated)
-            except IncludeValidationError as e:
+            except IncludeValidationError:
                 if not self.config.ignore_invalid_errors:
                     raise
                 # Silently ignore invalid include
@@ -97,4 +97,3 @@ class IncludeValidator:
             actual_relationship = allowed_include.relationship
 
         return actual_relationship
-
